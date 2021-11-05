@@ -177,49 +177,54 @@ class Ui_MainWindow(object):
         self.internet_lb.setGeometry(QtCore.QRect(40, 3, 58, 19))
         self.internet_lb.setStyleSheet("border-image: none; color: rgb(70, 99, 111); border-style:none;")
         self.internet_lb.setObjectName("internet_lb")
+##############################################################################################################
         self.settings_menu = QtWidgets.QWidget(self.centralwidget)
         self.settings_menu.setGeometry(QtCore.QRect(340, 130, 391, 431))
         self.settings_menu.setStyleSheet("border-image:transparent;\n"
 "background-color:#ffffff;\n"
 "border-radius:15px;")
         self.settings_menu.setObjectName("settings_menu")
+
+        self.settings_menu_lb = QtWidgets.QLabel(self.settings_menu)
+        self.settings_menu_lb.setGeometry(QtCore.QRect(30, 40, 81, 17))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setWeight(75)
+        self.settings_menu_lb.setFont(font)
+        self.settings_menu_lb.setObjectName("settings_menu_lb")
+
+        self.line_1 = QtWidgets.QFrame(self.settings_menu)
+        self.line_1.setGeometry(QtCore.QRect(30, 80, 321, 1))
+        self.line_1.setStyleSheet("background-color: gray;")
+        self.line_1.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line_1.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.line_1.setObjectName("line_1")
+
+        self.settings_menu_close_bt = QtWidgets.QPushButton(self.settings_menu)
+        self.settings_menu_close_bt.setGeometry(QtCore.QRect(350, 40, 16, 16))
+        self.settings_menu_close_bt.setStyleSheet("border-image:url(:/images/closeicon.png);\n"
+"width:24;\n"
+"height:24;")
+        self.settings_menu_close_bt.setObjectName("pushBsettings_menu_close_btutton_2")
+
         self.wifi_setting_lb = QtWidgets.QLabel(self.settings_menu)
         self.wifi_setting_lb.setGeometry(QtCore.QRect(30, 90, 351, 17))
         font = QtGui.QFont()
         font.setPointSize(10)
         font.setBold(True)
         font.setWeight(75)
+
         self.wifi_setting_lb.setFont(font)
         self.wifi_setting_lb.setObjectName("wifi_setting_lb")
+
         self.ssid_lb = QtWidgets.QLabel(self.settings_menu)
         self.ssid_lb.setGeometry(QtCore.QRect(100, 130, 31, 17))
         self.ssid_lb.setObjectName("ssid_lb")
         self.wifipass_lb = QtWidgets.QLabel(self.settings_menu)
         self.wifipass_lb.setGeometry(QtCore.QRect(80, 170, 51, 17))
         self.wifipass_lb.setObjectName("wifipass_lb")
-        self.wifi_setting_lb_2 = QtWidgets.QLabel(self.settings_menu)
-        self.wifi_setting_lb_2.setGeometry(QtCore.QRect(30, 230, 96, 17))
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        font.setBold(True)
-        font.setWeight(75)
-        self.wifi_setting_lb_2.setFont(font)
-        self.wifi_setting_lb_2.setObjectName("wifi_setting_lb_2")
-        self.ssid_lb_2 = QtWidgets.QLabel(self.settings_menu)
-        self.ssid_lb_2.setGeometry(QtCore.QRect(90, 270, 41, 17))
-        self.ssid_lb_2.setObjectName("ssid_lb_2")
-        self.star = QtWidgets.QLabel(self.settings_menu)
-        self.star.setGeometry(QtCore.QRect(70, 270, 20, 20))
-        self.star.setStyleSheet("color: rgb(204, 0, 0);")
-        self.star.setObjectName("star")
-        self.settings_ok_button = QtWidgets.QPushButton(self.settings_menu)
-        self.settings_ok_button.setGeometry(QtCore.QRect(160, 390, 89, 25))
-        self.settings_ok_button.setStyleSheet("border: 2px solid black; border-radius: 5px;")
-        self.settings_ok_button.setObjectName("settings_ok_button")
-        self.settings_cancel_button = QtWidgets.QPushButton(self.settings_menu)
-        self.settings_cancel_button.setGeometry(QtCore.QRect(260, 390, 89, 25))
-        self.settings_cancel_button.setStyleSheet("background-color:red ;border-radius: 5px;")
-        self.settings_cancel_button.setObjectName("settings_cancel_button")
+
         self.ssid_combo = QtWidgets.QComboBox(self.settings_menu)
         self.ssid_combo.setGeometry(QtCore.QRect(140, 120, 191, 31))
         font = QtGui.QFont()
@@ -292,76 +297,87 @@ class Ui_MainWindow(object):
         self.ssid_combo.addItem("")
         self.ssid_combo.addItem("")
         self.ssid_combo.addItem("")
-        self.line = QtWidgets.QFrame(self.settings_menu)
-        self.line.setGeometry(QtCore.QRect(30, 370, 321, 1))
-        self.line.setStyleSheet("background-color: gray;")
-        self.line.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.line.setObjectName("line")
-        self.checkBox = QtWidgets.QCheckBox(self.settings_menu)
-        self.checkBox.setEnabled(True)
-        self.checkBox.setGeometry(QtCore.QRect(140, 320, 101, 17))
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.checkBox.sizePolicy().hasHeightForWidth())
-        self.checkBox.setSizePolicy(sizePolicy)
-        self.checkBox.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.checkBox.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
-        self.checkBox.setAutoFillBackground(False)
-        self.checkBox.setStyleSheet("QCheckBox:indicator:checked\n"
-"{\n"
-"   image:url(:/images/checkicon.png);\n"
-"  width:14;\n"
-"  height:14;\n"
-"}")
-        self.checkBox.setCheckable(True)
-        self.checkBox.setChecked(True)
-        self.checkBox.setAutoRepeat(False)
-        self.checkBox.setAutoExclusive(False)
-        self.checkBox.setObjectName("checkBox")
-        self.checkBox_2 = QtWidgets.QCheckBox(self.settings_menu)
-        self.checkBox_2.setGeometry(QtCore.QRect(140, 340, 81, 17))
-        self.checkBox_2.setStyleSheet("QCheckBox::indicator:unchecked\n"
-"{\n"
-"  border: 1px solid grey;\n"
-"  border-radius:2;\n"
-"}")
-        self.checkBox_2.setObjectName("checkBox_2")
-        self.wifipass_text_2 = QtWidgets.QLineEdit(self.settings_menu)
-        self.wifipass_text_2.setGeometry(QtCore.QRect(140, 264, 191, 31))
-        self.wifipass_text_2.setStyleSheet(" border: 1px solid gray; border-radius: 5px;")
-        self.wifipass_text_2.setObjectName("wifipass_text_2")
+
+        self.wifipass_text = QtWidgets.QLineEdit(self.settings_menu)
+        self.wifipass_text.setGeometry(QtCore.QRect(140, 164, 191, 31))
+        self.wifipass_text.setStyleSheet(" border: 1px solid gray; border-radius: 5px;")
+        self.wifipass_text.setObjectName("wifipass_text")
+
         self.line_2 = QtWidgets.QFrame(self.settings_menu)
         self.line_2.setGeometry(QtCore.QRect(30, 210, 321, 1))
         self.line_2.setStyleSheet("background-color: gray;")
         self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_2.setObjectName("line_2")
-        self.wifipass_text = QtWidgets.QLineEdit(self.settings_menu)
-        self.wifipass_text.setGeometry(QtCore.QRect(140, 164, 191, 31))
-        self.wifipass_text.setStyleSheet(" border: 1px solid gray; border-radius: 5px;")
-        self.wifipass_text.setObjectName("wifipass_text")
-        self.line_3 = QtWidgets.QFrame(self.settings_menu)
-        self.line_3.setGeometry(QtCore.QRect(30, 80, 321, 1))
-        self.line_3.setStyleSheet("background-color: gray;")
-        self.line_3.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line_3.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.line_3.setObjectName("line_3")
-        self.wifi_setting_lb_3 = QtWidgets.QLabel(self.settings_menu)
-        self.wifi_setting_lb_3.setGeometry(QtCore.QRect(30, 40, 81, 17))
+
+
+        self.rdp_setting_lb_2 = QtWidgets.QLabel(self.settings_menu)
+        self.rdp_setting_lb_2.setGeometry(QtCore.QRect(30, 230, 96, 17))
         font = QtGui.QFont()
-        font.setPointSize(12)
+        font.setPointSize(10)
         font.setBold(True)
         font.setWeight(75)
-        self.wifi_setting_lb_3.setFont(font)
-        self.wifi_setting_lb_3.setObjectName("wifi_setting_lb_3")
-        self.pushButton_2 = QtWidgets.QPushButton(self.settings_menu)
-        self.pushButton_2.setGeometry(QtCore.QRect(350, 40, 16, 16))
-        self.pushButton_2.setStyleSheet("border-image:url(:/images/closeicon.png);\n"
-"width:24;\n"
-"height:24;")
-        self.pushButton_2.setObjectName("pushButton_2")
+        self.rdp_setting_lb_2.setFont(font)
+        self.rdp_setting_lb_2.setObjectName("rdp_setting_lb_2")
+
+        self.hostip_ld = QtWidgets.QLabel(self.settings_menu)
+        self.hostip_ld.setGeometry(QtCore.QRect(90, 270, 41, 17))
+        self.hostip_ld.setObjectName("hostip_ld")
+        self.star = QtWidgets.QLabel(self.settings_menu)
+        self.star.setGeometry(QtCore.QRect(70, 270, 20, 20))
+        self.star.setStyleSheet("color: rgb(204, 0, 0);")
+        self.star.setObjectName("star")
+
+        self.hostip = QtWidgets.QLineEdit(self.settings_menu)
+        self.hostip.setGeometry(QtCore.QRect(140, 264, 191, 31))
+        self.hostip.setStyleSheet(" border: 1px solid gray; border-radius: 5px;")
+        self.hostip.setObjectName("hostip")
+
+        self.multimon_checkBox = QtWidgets.QCheckBox(self.settings_menu)
+        self.multimon_checkBox.setEnabled(True)
+        self.multimon_checkBox.setGeometry(QtCore.QRect(140, 320, 101, 17))
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.multimon_checkBox.sizePolicy().hasHeightForWidth())
+        self.multimon_checkBox.setSizePolicy(sizePolicy)
+        self.multimon_checkBox.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.multimon_checkBox.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
+        self.multimon_checkBox.setAutoFillBackground(False)
+        self.multimon_checkBox.setStyleSheet("QCheckBox:indicator:checked\n"
+"{\n"
+"   image:url(:/images/checkicon.png);\n"
+"  width:14;\n"
+"  height:14;\n"
+"}")
+        self.multimon_checkBox.setCheckable(True)
+        self.multimon_checkBox.setChecked(True)
+        self.multimon_checkBox.setAutoRepeat(False)
+        self.multimon_checkBox.setAutoExclusive(False)
+        self.multimon_checkBox.setObjectName("multimon_checkBox")
+
+        self.sound_checkBox = QtWidgets.QCheckBox(self.settings_menu)
+        self.sound_checkBox.setGeometry(QtCore.QRect(140, 340, 81, 17))
+        self.sound_checkBox.setStyleSheet("QCheckBox::indicator:unchecked\n"
+"{\n"
+"  border: 1px solid grey;\n"
+"  border-radius:2;\n"
+"}")
+        self.sound_checkBox.setObjectName("sound_checkBox")
+
+
+        self.settings_ok_button = QtWidgets.QPushButton(self.settings_menu)
+        self.settings_ok_button.setGeometry(QtCore.QRect(160, 390, 89, 25))
+        self.settings_ok_button.setStyleSheet("border: 2px solid black; border-radius: 5px;")
+        self.settings_ok_button.setObjectName("settings_ok_button")
+        self.settings_cancel_button = QtWidgets.QPushButton(self.settings_menu)
+        self.settings_cancel_button.setGeometry(QtCore.QRect(260, 390, 89, 25))
+        self.settings_cancel_button.setStyleSheet("background-color:red ;border-radius: 5px;")
+        self.settings_cancel_button.setObjectName("settings_cancel_button")
+        
+
+       
+
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
@@ -380,8 +396,8 @@ class Ui_MainWindow(object):
         self.wifi_setting_lb.setText(_translate("MainWindow", "Network Settings(option)"))
         self.ssid_lb.setText(_translate("MainWindow", "SSID:"))
         self.wifipass_lb.setText(_translate("MainWindow", "Password:"))
-        self.wifi_setting_lb_2.setText(_translate("MainWindow", "RDP Settings"))
-        self.ssid_lb_2.setText(_translate("MainWindow", "HostIP:"))
+        self.rdp_setting_lb.setText(_translate("MainWindow", "RDP Settings"))
+        self.hostip.setText(_translate("MainWindow", "HostIP:"))
         self.star.setText(_translate("MainWindow", "*"))
         self.settings_ok_button.setText(_translate("MainWindow", "OK"))
         self.settings_cancel_button.setText(_translate("MainWindow", "Cancel"))
@@ -391,10 +407,10 @@ class Ui_MainWindow(object):
         self.ssid_combo.setItemText(3, _translate("MainWindow", "dddd"))
         self.ssid_combo.setItemText(4, _translate("MainWindow", "eeee"))
         self.ssid_combo.setItemText(5, _translate("MainWindow", "New Item"))
-        self.checkBox.setText(_translate("MainWindow", "Multi-Monitors"))
-        self.checkBox_2.setText(_translate("MainWindow", "Sound"))
-        self.wifi_setting_lb_3.setText(_translate("MainWindow", "Settings"))
-        self.pushButton_2.setText(_translate("MainWindow", "X"))
+        self.multimon_checkBox.setText(_translate("MainWindow", "Multi-Monitors"))
+        self.sound_checkBox.setText(_translate("MainWindow", "Sound"))
+        self.settings_menu_lb.setText(_translate("MainWindow", "Settings"))
+        self.settings_menu_close.setText(_translate("MainWindow", "X"))
 import resource_rc
 
 

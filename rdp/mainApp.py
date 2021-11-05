@@ -20,16 +20,22 @@ from wireless import Wireless
 import time
 import netifaces
 from screeninfo import get_monitors
+from getmac import get_mac_address
+import string
 
-global browser_flag, RDPBinary, RDPDomain, RDPServer, RDPDomainFlags, RDPServerFlags, RDPMultiScreenFlags, RDPUserFlags, RDPPasswordFlags, RDPFullScreenFlags, screenWidth, screenHeight, ssid, ssid_pass, hostip, multi_mode, ssids, monitorInfo, chrome_flag, rdpsoundFlag, odroidC2
+global browser_flag, RDPBinary, RDPDomain, RDPServer, RDPDomainFlags, RDPServerFlags, RDPMultiScreenFlags, RDPUserFlags, RDPPasswordFlags, RDPFullScreenFlags, screenWidth, screenHeight, ssid, ssid_pass, hostip, multi_mode, ssids, monitorInfo, chrome_flag, rdpsoundFlag
 RDPBinary = "xfreerdp"
 RDPDomain = "" 
 RDPServer = ""
+RDPGateway = ""
 RDPDomainFlags = "/d:"
 RDPServerFlags = "/v:"
 RDPUserFlags = "/u:"
 RDPPasswordFlags = "/p:"
 RDPFullScreenFlags = "/f"
+RDPGatewayFlags = "/g:"
+RDPGatewayUserFlag = "/gu:"
+RDPGatewayPassFlag = "/gp:"
 RDPMultiScreenFlags = 1
 screenWidth = 0
 screenHeight = 0
@@ -39,11 +45,11 @@ config = {}
 multi_mode = 2
 browser_flag = 0
 ssids = []
+wireless = Wireless()
 monitorInfo = []
 chrome_flag = 0
 rdpsoundFlag = 0
 
-wireless = Wireless() #if odroid, remove
 def disableMouseClick():
     proc = subprocess.Popen("xmodmap -e \"pointer = 1 2 0\"", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     (out, err) = proc.communicate()
@@ -56,6 +62,25 @@ def resetMouseKeyboard():
     #(out, err) = proc.communicate()
     #proc = subprocess.Popen("setxkbmap -layout us", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     #(out, err) = proc.communicate()
+
+def checkSpecialCharacter(str):
+    retstr=""
+    for c in str:
+        if c in string.punctuation:
+            retstr = retstr + '\\'
+        retstr = retstr + c
+    return retstr
+
+class mainwindowapp(QtWidgets.QMainWindow):
+    def __init__(self,parent=None):
+        QtWidgets.QWidget.__init__(self,parent=None)
+    def eventFilter(self, source, event):
+        if event.type() == QtCore.QEvent.KeyPress:
+            print('KeyPress: %s [%r]' % (event.key(), source))
+            return True
+            #event.ignore()
+    def closeEvent(self, event):
+        event.ignore()
 
 class QDoublePushButton(QPushButton):
     doubleClicked = pyqtSignal()
@@ -93,7 +118,7 @@ class MyQLabel(QLabel):
 
 class Ui_MainWindow(object):
     def __init__(self):
-        global RDPServer, RDPMultiScreenFlags
+        global RDPServer, RDPMultiScreenFlags, RDPGateway
         self.primaryscreen = {
         "width": 1920, 
         "height": 1080, 
@@ -112,18 +137,20 @@ class Ui_MainWindow(object):
         "sign_button_width":150,
         "sign_button_height": 40
         }
+        self.macaddress = ""#get_mac_address()
         self.showPass = 0
         self.y_rate = 1.000; #vertical rate
         self.x_rate = 1.000; #horizental rate
         #self.settingsinfo = {"address" : " ", "multiscreen": 0}
-        with open('/home/pi/settings.dat') as json_file:
+        with open('/home/mdpzero/settings.dat') as json_file:
             data = json.load(json_file)
         RDPServer = data["address"]
+        RDPGateway = data["gateway"]
+        self.username = data["username"]
         #RDPMultiScreenFlags = data["multiscreen"]
         self.blur_effect_settings = QGraphicsBlurEffect()
         self.blur_effect_settings.setBlurRadius(20)
         self.blur_effect_settings.setEnabled(False)
-        
         commandline = "wpa_cli scan_result" 
         proc = subprocess.Popen(commandline, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (out, err) = proc.communicate()
@@ -139,11 +166,22 @@ class Ui_MainWindow(object):
             cell = rows[index].split('\t')
             cells.append(cell)
             ssids.append(cell[len(cell) - 1])
-        print(ssids)
 
+        print(ssids)
+        commandline = "ifconfig" 
+        proc = subprocess.Popen(commandline, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        (out, err) = proc.communicate()
+        result = out.decode("utf-8")
+        print(result)
+        macaddress_start = result.find('ether')
+        print(macaddress_start)
+        if macaddress_start > 0:
+            self.macaddress = result[(macaddress_start+6):(macaddress_start+23)]
+        print("Mac Address: ", self.macaddress.upper())
         disableMouseClick()
         # config = json.loads(readFromFile())
         # print("config file:", config)
+
     def checkBrowser(self):
         global chrome_flag
         commandline = "ps aux | grep chromium-browser"
@@ -207,18 +245,20 @@ class Ui_MainWindow(object):
             (out, err) = proc.communicate()
 
     def onClickOkButton(self):
-        global RDPServer, RDPMultiScreenFlags, multi_mode, ssids
+        global RDPServer, RDPGateway, RDPMultiScreenFlags, multi_mode, ssids
         self.blur_effect_settings.setEnabled(False)
         self.settings_menu.hide()
         RDPServer = self.hostip_text.text()
+        RDPGateway = self.gateway_text.text()
+        print("Gateway: ", RDPGateway)
         print("Host IP:", RDPServer)
         ssid = str(self.ssid_combo.currentText())
         password = str(self.wifipass_text.text())
         print("wifi info:",ssid, password)
         error_text = ""
         print(ssids)
-        data = {"address": RDPServer, "multiscreen": RDPMultiScreenFlags}
-        with open('/home/pi/settings.dat', 'w') as outfile:
+        data = {"address": RDPServer, "multiscreen": RDPMultiScreenFlags, "username":self.username, "gateway": RDPGateway}
+        with open('/home/mdpzero/settings.dat', 'w') as outfile:
             json.dump(data, outfile)
 
         if len(ssid) > 0 and len(password) > 0:
@@ -356,8 +396,8 @@ class Ui_MainWindow(object):
 
     def buttonClickHandler(self):
         print(">>>>>>>>>>>>>>>>>>")
-        global RDPBinary, RDPDomain, RDPServer, RDPDomainFlags, RDPServerFlags, RDPUserFlags, RDPPasswordFlags, RDPFullScreenFlags, RDPMultiScreenFlags, chrome_flag, rdpsoundFlag
-        self.checkBrowser()
+        global RDPBinary, RDPDomain, RDPGateway, RDPServer, RDPDomainFlags, RDPServerFlags, RDPUserFlags, RDPPasswordFlags, RDPFullScreenFlags, RDPMultiScreenFlags, chrome_flag, rdpsoundFlag
+        #self.checkBrowser()
         resetMouseKeyboard()
         print(chrome_flag)
         username = self.username_text.text()
@@ -365,42 +405,65 @@ class Ui_MainWindow(object):
         password = self.password_text.text()
         print("password: ", password)
 
+        if username == "" or password == "":
+            return
+
         #  xfreerdp /v:192.168.3.100 /u:pi /p:12345678 /f
         commandline = ""
-        commandline = RDPBinary + " " + RDPServerFlags + RDPServer + " " + RDPUserFlags + username + " " + RDPPasswordFlags + password + " " + "/cert-ignore /usb:auto /rfx /gfx /gfx-h264 /network:auto -bitmap-cache -glyph-cache -fonts -offscreen-cache"   
+        userinfo = username.split('\\')
+        if len(userinfo) > 1:
+            username = checkSpecialCharacter(userinfo[1])
+            print("user info:", username)
+            RDPDomain = checkSpecialCharacter(userinfo[0])
+            print("domain info:", RDPDomain)
+            password = checkSpecialCharacter(password)
+            print("password info:", password)
+            commandline = RDPBinary + " " + RDPServerFlags + RDPServer + " " + RDPUserFlags + username + " " + RDPPasswordFlags + password + " " + RDPDomainFlags + RDPDomain + " " + "/cert-ignore /usb:auto /rfx /gfx /gfx-h264 /network:auto -bitmap-cache -glyph-cache -fonts -offscreen-cache"
+        else:
+            commandline = RDPBinary + " " + RDPServerFlags + RDPServer + " " + RDPUserFlags + username + " " + RDPPasswordFlags + password + " " + "/cert-ignore /usb:auto /rfx /gfx /gfx-h264 /network:auto -bitmap-cache -glyph-cache -fonts -offscreen-cache"
+        
         if rdpsoundFlag == 1:
             commandline = commandline + " " + "/sound /microphone"
         if RDPMultiScreenFlags == 1:
             RectScreen0 = QDesktopWidget().screenGeometry (0);
             full_width = RectScreen0.right();
             full_height = RectScreen0.bottom();
-            commandline = commandline + " " + "/w:" + str(full_width) + " " + "/h:" + str(full_height) + " " + "/multimon"
+            commandline = commandline + " " + "/f /multimon"
         else:
             #commandline = commandline + " " + "-decorations"
             commandline = commandline + " " + "/w:" + str(screenWidth) + " " + "/h:" + str(screenHeight) + " " + "-decorations"
+
+        if len(RDPGateway)>0:
+            commandline = commandline + " " + RDPGatewayFlags + RDPGateway + " "+ RDPGatewayUserFlag + username + "\@" + RDPDomain + " " + RDPGatewayPassFlag + password + " " + "-sec-tls"
         print("commandline: ", commandline)
         #run script
+        self.main_widget.setCursor(Qt.WaitCursor)
         proc = subprocess.Popen(commandline, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (out, err) = proc.communicate()
         print(">>> out: \n")
         print(out)
         print(">>> error: \n")
         print(err)
+        self.main_widget.setCursor(Qt.ArrowCursor)
         str_out = out.decode("utf-8")
         if "ERRCONNECT_LOGON_FAILURE" in str_out:
-            self.error_widget.show()
-            self.error_content.setText("Wrong user or password. Try again")
+            self.warning_widgt.show()
+            self.warning_content.setText("Wrong username or password.\nPlease try again")
         elif "ERRCONNECT_CONNECT_FAILED" in str_out:
-            self.error_widget.show()
-            self.error_content.setText("Could not connect to cloud server")
+            self.warning_widgt.show()
+            self.warning_content.setText("Could not connect to cloud server")
         elif "ERRCONNECT_SECURITY_NEGO_CONNECT_FAILED" in str_out:
-            self.error_widget.show()
-            self.error_content.setText("Could not connect to cloud server")
+            self.warning_widgt.show()
+            self.warning_content.setText("Could not connect to cloud server")
         else:
-            self.error_widget.hide()
-            self.error_content.setText(" ")
+            self.warning_widgt.hide()
+            self.warning_content.setText(" ")
 
         self.password_text.setText("")
+        self.username = self.username_text.text()
+        data = {"address": RDPServer, "multiscreen": RDPMultiScreenFlags, "username":self.username, "gateway": RDPGateway}
+        with open('/home/mdpzero/settings.dat', 'w') as outfile:
+            json.dump(data, outfile)
         disableMouseClick()
         # self.error_content.adjustSize()
 
@@ -465,9 +528,12 @@ class Ui_MainWindow(object):
             self.password_text.setEchoMode(QtWidgets.QLineEdit.Password)
             self.eyeicon.setStyleSheet("border-image: url(:/images/hideicon.png);")
             self.showPass = 0
+    def onWarningCancelButton(self):
+        self.warning_content.setText("")
+        self.warning_widgt.hide()
 
     def setupUi(self, MainWindow):
-        global RDPServer, browser_flag, screenWidth, screenHeight
+        global RDPServer, browser_flag, screenWidth, screenHeight, RDPGateway
         self.x_rate = screenWidth / 1920
         self.y_rate = screenHeight / 1080
         MainWindow.setWindowFlags(Qt.FramelessWindowHint)
@@ -486,33 +552,65 @@ class Ui_MainWindow(object):
         self.main_widget.setCursor(Qt.ArrowCursor)
 
         self.login_widget = QtWidgets.QWidget(self.main_widget)
-        self.login_widget.setGeometry(QtCore.QRect(int(self.x_rate * 80), int(self.y_rate * 402), int(self.x_rate * 360), int(self.y_rate * 276)))
+        self.login_widget.setGeometry(QtCore.QRect(int(self.x_rate * 80), int(self.y_rate * 256), int(self.x_rate * 360), int(self.y_rate * 420)))
         self.login_widget.setStyleSheet("border-image:none")
         self.login_widget.setObjectName("login_widget")
 
+        self.warning_widgt = QtWidgets.QWidget(self.login_widget)
+        self.warning_widgt.setGeometry(QtCore.QRect(0, 0, 360, 100))
+        self.warning_widgt.setStyleSheet("background-color: #F24361; border-radius: 8px;")
+
+        self.warningicon = MyQLabel(self.warning_widgt)
+        self.warningicon.setGeometry(QtCore.QRect(16, 16, 20, 20))
+        self.warningicon.setStyleSheet("border-image: url(:/images/warning.png); border-width: 0;")
+        self.warningicon.setText("")
+        self.warningicon.setObjectName("warningicon")
+
+        self.warning_label = QtWidgets.QLabel(self.warning_widgt)
+        self.warning_label.setGeometry(QtCore.QRect(52, 16, 256, 20))
+        self.warning_label.setStyleSheet("color: rgb(255, 255, 255); font-family: Poppins; font-style: normal; font-weight: 600; font-size: 14px; line-height: 20px;")
+        self.warning_label.setObjectName("warning_label")
+
+        self.warning_close_button = QtWidgets.QPushButton(self.warning_widgt)
+        self.warning_close_button.setGeometry(QtCore.QRect(324, 16, 20, 20))
+        self.warning_close_button.setCheckable(False)
+        self.warning_close_button.setStyleSheet("border-image:url(:/images/warning_close.png);")
+        self.warning_close_button.setObjectName("warning_close_button")
+        self.warning_close_button.clicked.connect(lambda: self.onWarningCancelButton())
+
+        self.warning_content = QtWidgets.QLabel(self.warning_widgt)
+        self.warning_content.setGeometry(QtCore.QRect(52, 44, 256, 40))
+        self.warning_content.setStyleSheet("color: rgb(255, 255, 255); font-family: Poppins; font-style: normal; font-weight: 400; font-size: 14px; line-height: 20px;")
+        self.warning_content.setObjectName("warning_content")
+        self.warning_content.setText("Please try again")
+        self.warning_widgt.hide()
+
         self.username_lb = QtWidgets.QLabel(self.login_widget)
-        self.username_lb.setGeometry(QtCore.QRect(0, int(self.y_rate * 56), 360, 20))
+        self.username_lb.setGeometry(QtCore.QRect(0, int(self.y_rate * 180), 360, 20))
         self.username_lb.setStyleSheet("border-image:none; background-color: transparent; color: rgba(255, 255, 255,0.8); font-family: Poppins; font-style: normal;font-weight: 600; font-size: 14px; line-height: 20px;")
         self.username_lb.setObjectName("username_lb")
 
         self.username_text = QtWidgets.QLineEdit(self.login_widget)
-        self.username_text.setGeometry(QtCore.QRect(0, int(self.y_rate * 84), int(self.x_rate * 360), int(self.y_rate * 40)))
-        self.username_text.setStyleSheet("border-image:none; color: rgb(255, 255, 255); background-color: rgb(73, 74, 92); border-radius:8px;\n")
+        self.username_text.setGeometry(QtCore.QRect(0, int(self.y_rate * 208), int(self.x_rate * 360), int(self.y_rate * 40)))
+        self.username_text.setStyleSheet("border-image:none; color: rgb(255, 255, 255); background-color: rgb(73, 74, 92); border-radius:8px;padding-left: 12px;\n")
         self.username_text.setObjectName("username_text")
+        self.username_text.returnPressed.connect(lambda: self.buttonClickHandler())
+        self.username_text.setText(self.username)
 
         self.password_lb = QtWidgets.QLabel(self.login_widget)
-        self.password_lb.setGeometry(QtCore.QRect(0, int(self.y_rate * 140), 360, 20))
+        self.password_lb.setGeometry(QtCore.QRect(0, int(self.y_rate * 264), 360, 20))
         self.password_lb.setStyleSheet("border-image:none; background-color: transparent; color: rgba(255, 255, 255,0.8); font-family: Poppins; font-style: normal;font-weight: 600; font-size: 14px; line-height: 20px;")
         self.password_lb.setObjectName("password_lb")
 
         self.password_text = QtWidgets.QLineEdit(self.login_widget)
-        self.password_text.setGeometry(QtCore.QRect(0, int(self.y_rate * 168), int(self.x_rate * 360), int(self.y_rate * 40)))
-        self.password_text.setStyleSheet("border-image:none; color: rgb(255, 255, 255); background-color: rgb(73, 74, 92); border-radius:8px;")
+        self.password_text.setGeometry(QtCore.QRect(0, int(self.y_rate * 292), int(self.x_rate * 360), int(self.y_rate * 40)))
+        self.password_text.setStyleSheet("border-image:none; color: rgb(255, 255, 255); background-color: rgb(73, 74, 92); border-radius:8px;padding-left: 12px;")
         self.password_text.setObjectName("password_text")
+        self.password_text.returnPressed.connect(lambda: self.buttonClickHandler())
         self.password_text.setEchoMode(QtWidgets.QLineEdit.Password)
         
         self.login_button = QtWidgets.QPushButton(self.login_widget)
-        self.login_button.setGeometry(QtCore.QRect(int(self.x_rate * 264), int(self.y_rate * 236), int(self.x_rate * 96), int(self.y_rate * 40)))
+        self.login_button.setGeometry(QtCore.QRect(int(self.x_rate * 264), int(self.y_rate * 380), int(self.x_rate * 96), int(self.y_rate * 40)))
         self.login_button.setMinimumSize(QtCore.QSize(0, 0))
         self.login_button.setMaximumSize(QtCore.QSize(10000, 10000))
         self.login_button.setLayoutDirection(QtCore.Qt.RightToLeft)
@@ -522,12 +620,12 @@ class Ui_MainWindow(object):
         self.login_button.clicked.connect(lambda: self.buttonClickHandler())
 
         self.sign_label = QtWidgets.QLabel(self.login_widget)
-        self.sign_label.setGeometry(QtCore.QRect(0, 0, 360, 32))
+        self.sign_label.setGeometry(QtCore.QRect(0, 124, 360, 32))
         self.sign_label.setStyleSheet("color: rgb(255, 255, 255); font-family: Poppins; font-style: normal; font-weight: 600; font-size: 24px; line-height: 32px;")
         self.sign_label.setObjectName("sign_label")
 
         self.eyeicon = MyQLabel(self.login_widget)
-        self.eyeicon.setGeometry(QtCore.QRect(int(self.x_rate * 324), int(self.y_rate * 178), 20, 20))
+        self.eyeicon.setGeometry(QtCore.QRect(int(self.x_rate * 325), int(self.y_rate * 304), 20, 20))
         self.eyeicon.setStyleSheet("border-image: url(:/images/hideicon.png);")
         self.eyeicon.setText("")
         self.eyeicon.setObjectName("eyeicon")
@@ -632,7 +730,7 @@ class Ui_MainWindow(object):
         self.internet_lb.DoubleClicked.connect(lambda: self.onClickInternetButton())
 
         self.settings_menu = QtWidgets.QWidget(self.centralwidget)
-        self.settings_menu.setGeometry(QtCore.QRect((screenWidth * 0.5 - int(self.x_rate * 372)), (screenHeight * 0.5 - int(self.y_rate * 294)), int(self.x_rate * 744), int(self.y_rate * 587)))
+        self.settings_menu.setGeometry(QtCore.QRect((screenWidth * 0.5 - int(self.x_rate * 372)), (screenHeight * 0.5 - int(self.y_rate * 294)), int(self.x_rate * 744), int(self.y_rate * 651)))
         self.settings_menu.setStyleSheet("border-image:transparent;background-color:#ffffff; border-radius:16px;")
         self.settings_menu.setObjectName("settings_menu")
         self.wifi_setting_lb = QtWidgets.QLabel(self.settings_menu)
@@ -641,7 +739,7 @@ class Ui_MainWindow(object):
         self.wifi_setting_lb.setObjectName("wifi_setting_lb")
 
         self.ssid_lb = QtWidgets.QLabel(self.settings_menu)
-        self.ssid_lb.setGeometry(QtCore.QRect(int(self.x_rate * 24), int(self.y_rate * 157), int(self.x_rate * 232), 24))
+        self.ssid_lb.setGeometry(QtCore.QRect(int(self.x_rate * 24), int(self.y_rate * 157), int(self.x_rate * 300), 24))
         self.ssid_lb.setObjectName("ssid_lb")
         self.ssid_lb.setStyleSheet("color: #505050; font-family: Poppins; font-style: normal; font-weight:normal; font-size: 16px; line-height: 24px;")
         self.ssid_lb.setAlignment(QtCore.Qt.AlignRight)
@@ -670,14 +768,14 @@ class Ui_MainWindow(object):
         self.star.setAlignment(QtCore.Qt.AlignRight)
 
         self.settings_ok_button = QtWidgets.QPushButton(self.settings_menu)
-        self.settings_ok_button.setGeometry(QtCore.QRect(int(self.x_rate * 416), int(self.y_rate * 515), int(self.x_rate * 144), int(self.y_rate * 48)))
-        self.settings_ok_button.setStyleSheet("border: 1.5px solid #121212; border-radius: 8px; box-sizing: border-box; align-self:stretch; color:#121212; font-family: Poppins; font-style:normal; font-weight:600; font-size:16px; line-height:24px")
+        self.settings_ok_button.setGeometry(QtCore.QRect(int(self.x_rate * 576), int(self.y_rate * 579), int(self.x_rate * 144), int(self.y_rate * 48)))
+        self.settings_ok_button.setStyleSheet("border: 1.5px solid #F24361; background-color: #F24361; border-radius: 8px; box-sizing: border-box; align-self:stretch; color:#121212; font-family: Poppins; font-style:normal; font-weight:600; font-size:16px; line-height:24px")
         self.settings_ok_button.setObjectName("settings_ok_button")
         self.settings_ok_button.clicked.connect(lambda: self.onClickOkButton())
 
         self.settings_cancel_button = QtWidgets.QPushButton(self.settings_menu)
-        self.settings_cancel_button.setGeometry(QtCore.QRect(int(self.x_rate * 576), int(self.y_rate * 515), int(self.x_rate * 144), int(self.y_rate * 48)))
-        self.settings_cancel_button.setStyleSheet("border: 1.5px solid #F24361; background-color: #F24361; border-radius: 8px; box-sizing: border-box; align-self:stretch; color:#121212; font-family: Poppins; font-style:normal; font-weight:600; font-size:16px; line-height:24px")
+        self.settings_cancel_button.setGeometry(QtCore.QRect(int(self.x_rate * 416), int(self.y_rate * 579), int(self.x_rate * 144), int(self.y_rate * 48)))
+        self.settings_cancel_button.setStyleSheet("border: 1.5px solid #121212; border-radius: 8px; box-sizing: border-box; align-self:stretch; color:#121212; font-family: Poppins; font-style:normal; font-weight:600; font-size:16px; line-height:24px")
         self.settings_cancel_button.setObjectName("settings_cancel_button")
         self.settings_cancel_button.clicked.connect(lambda: self.onClickCancelButton())
 
@@ -710,16 +808,16 @@ class Ui_MainWindow(object):
         self.ssid_combo.setInsertPolicy(QtWidgets.QComboBox.InsertAtCurrent)
         self.ssid_combo.setFrame(True)
         self.ssid_combo.setObjectName("ssid_combo")
-        self.line = QtWidgets.QFrame(self.settings_menu)
-        self.line.setGeometry(QtCore.QRect(int(self.x_rate * 24), int(self.x_rate * 490), int(self.x_rate * 696), 1))
-        self.line.setStyleSheet("background-color: #E0E0E0;")
-        self.line.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.line.setObjectName("line")
+        self.line_3 = QtWidgets.QFrame(self.settings_menu)
+        self.line_3.setGeometry(QtCore.QRect(int(self.x_rate * 24), int(self.x_rate * 554), int(self.x_rate * 696), 1))
+        self.line_3.setStyleSheet("background-color: #E0E0E0;")
+        self.line_3.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line_3.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.line_3.setObjectName("line")
 
         self.multiscreen_extended = QtWidgets.QCheckBox(self.settings_menu)
         self.multiscreen_extended.setEnabled(True)
-        self.multiscreen_extended.setGeometry(QtCore.QRect(int(self.x_rate * 230), int(self.y_rate * 412), int(self.x_rate * 150), 20))
+        self.multiscreen_extended.setGeometry(QtCore.QRect(int(self.x_rate * 230), int(self.y_rate * 476), int(self.x_rate * 150), 20))
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -752,7 +850,7 @@ class Ui_MainWindow(object):
         self.multiscreen_extended.stateChanged.connect(self.isMultiScreenExtended)
 
         self.rdpsoundFlag_lb = QtWidgets.QCheckBox(self.settings_menu)
-        self.rdpsoundFlag_lb.setGeometry(QtCore.QRect(int(self.x_rate * 230), int(self.y_rate * 448), int(self.x_rate * 150), 20))
+        self.rdpsoundFlag_lb.setGeometry(QtCore.QRect(int(self.x_rate * 230), int(self.y_rate * 512), int(self.x_rate * 150), 20))
         self.rdpsoundFlag_lb.setStyleSheet("QCheckBox:indicator:checked\n"
 "{\n"
 "   image:url(:/images/checkicon.png);\n"
@@ -773,8 +871,26 @@ class Ui_MainWindow(object):
         self.hostip_text.setStyleSheet("    background: #FFFFFF; flex: none; order: 1; flex-grow: 0; combobox-popup: 0;\n"
 "    border: 1px solid #CBCBCB; box-sizing:border-box;\n"
 "    color:#505050; font-family: Poppins; font-style:normal; font-weight:normal; font-size:16px; line-height:24px;\n"
-"    border-radius: 8px;\n")
+"    border-radius: 8px;\n"
+"    padding-left: 12px;\n")
+        self.hostip_text.setText(RDPServer)
         self.hostip_text.setObjectName("hostip_text")
+
+        self.gateway_lb = QtWidgets.QLabel(self.settings_menu)
+        self.gateway_lb.setGeometry(QtCore.QRect(int(self.x_rate * 178), int(self.y_rate *422), int(self.x_rate * 78), 24))
+        self.gateway_lb.setObjectName("gateway_lb")
+        self.gateway_lb.setStyleSheet("color: #505050; font-family: Poppins; font-style: normal; font-weight:normal; font-size: 16px; line-height: 24px;")
+        self.gateway_lb.setAlignment(QtCore.Qt.AlignRight)
+
+        self.gateway_text = QtWidgets.QLineEdit(self.settings_menu)
+        self.gateway_text.setGeometry(QtCore.QRect(int(self.x_rate * 272), int(self.y_rate * 410), int(self.x_rate * 448), int(self.y_rate * 48)))
+        self.gateway_text.setStyleSheet("    background: #FFFFFF; flex: none; order: 1; flex-grow: 0; combobox-popup: 0;\n"
+"    border: 1px solid #CBCBCB; box-sizing:border-box;\n"
+"    color:#505050; font-family: Poppins; font-style:normal; font-weight:normal; font-size:16px; line-height:24px;\n"
+"    border-radius: 8px;\n"
+"    padding-left: 12px;\n")
+        self.gateway_text.setText(RDPGateway)
+        self.gateway_text.setObjectName("gateway_text")
 
         self.line_2 = QtWidgets.QFrame(self.settings_menu)
         self.line_2.setGeometry(QtCore.QRect(int(self.x_rate * 24), int(self.y_rate * 281), int(self.x_rate * 696), 1))
@@ -791,12 +907,12 @@ class Ui_MainWindow(object):
 "    border-radius: 8px;\n")
         self.wifipass_text.setObjectName("wifipass_text")
 
-        self.line_3 = QtWidgets.QFrame(self.settings_menu)
-        self.line_3.setGeometry(QtCore.QRect(int(self.x_rate * 24), int(self.y_rate * 80), int(self.x_rate * 696), 1))
-        self.line_3.setStyleSheet("background-color: #E0E0E0;")
-        self.line_3.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line_3.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.line_3.setObjectName("line_3")
+        self.line_1 = QtWidgets.QFrame(self.settings_menu)
+        self.line_1.setGeometry(QtCore.QRect(int(self.x_rate * 24), int(self.y_rate * 80), int(self.x_rate * 696), 1))
+        self.line_1.setStyleSheet("background-color: #E0E0E0;")
+        self.line_1.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line_1.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.line_1.setObjectName("line_1")
         self.wifi_setting_lb_3 = QtWidgets.QLabel(self.settings_menu)
         self.wifi_setting_lb_3.setGeometry(QtCore.QRect(int(self.x_rate * 24), int(self.y_rate * 24), int(self.x_rate * 200), 32))
         font = QtGui.QFont()
@@ -814,6 +930,12 @@ class Ui_MainWindow(object):
         self.settings_close_button.setObjectName("settings_close_button")
         self.settings_close_button.clicked.connect(lambda: self.onClickCancelButton())
 
+        self.macaddress_lb = QtWidgets.QLabel(self.centralwidget)
+        self.macaddress_lb.setGeometry(QtCore.QRect(380, 1024, 200, 16))
+        self.macaddress_lb.setStyleSheet("border-image:none; background-color: transparent; color: rgba(255, 255, 255,0.8); font-family: Poppins; font-style: normal;font-weight: 400; font-size: 12px; line-height: 16px;")
+        self.macaddress_lb.setObjectName("macaddress_lb")
+        self.macaddress_lb.setText(self.macaddress.upper())
+
         self.loading_widget = QtWidgets.QWidget(self.centralwidget)
         self.loading_widget.setGeometry(QtCore.QRect(0,0, screenWidth,screenHeight))
         self.loading_widget.setStyleSheet("border-image: none;")
@@ -830,6 +952,8 @@ class Ui_MainWindow(object):
         self.settings_menu.hide()
         self.main_widget.raise_()
         self.settings_menu.raise_()
+        self.macaddress_lb.raise_()
+
         #self.loading_widget.raise_()
         MainWindow.setCentralWidget(self.centralwidget)
 
@@ -839,19 +963,21 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.username_lb.setText(_translate("MainWindow", "User name"))
-        self.password_lb.setText(_translate("MainWindow", "Password"))
-        self.login_button.setText(_translate("MainWindow", "Sign in"))
-        self.sign_label.setText(_translate("MainWindow", "Sign in"))
+        self.username_lb.setText(_translate("MainWindow", " User name"))
+        self.password_lb.setText(_translate("MainWindow", " Password"))
+        self.login_button.setText(_translate("MainWindow", "Login"))
+        self.sign_label.setText(_translate("MainWindow", "Single Sign-On"))
         self.shutdown_lb.setText(_translate("MainWindow", "Shutdown"))
         self.restart_lb.setText(_translate("MainWindow", "Restart"))
         self.settings_lb.setText(_translate("MainWindow", "Settings"))
         self.internet_lb.setText(_translate("MainWindow", "Internet"))
+        self.warning_label.setText(_translate("MainWindow", "Error!"))
         self.wifi_setting_lb.setText(_translate("MainWindow", "Network Settings(option)"))
         self.ssid_lb.setText(_translate("MainWindow", "SSID:"))
         self.wifipass_lb.setText(_translate("MainWindow", "Password:"))
         self.rdp_setting_lb.setText(_translate("MainWindow", "RDP Settings"))
         self.hostip_lb.setText(_translate("MainWindow", "HostIP:"))
+        self.gateway_lb.setText(_translate("MainWindow", "Gateway:"))
         self.star.setText(_translate("MainWindow", "*"))
         self.settings_ok_button.setText(_translate("MainWindow", "OK"))
         self.settings_cancel_button.setText(_translate("MainWindow", "Cancel"))
@@ -914,9 +1040,13 @@ if __name__ == "__main__":
     screenWidth = size.width()
     screenHeight = size.height()
     print(screenWidth, screenHeight)
-    MainWindow = QtWidgets.QMainWindow()
+    MainWindow = mainwindowapp()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
 
+#gateway: rdg.eikosstatyba.lt
+#computer: corp1
+#user: eika\test
+#pass: eimeim22@@

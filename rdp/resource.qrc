@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="images">
+    <file>warning_close.png</file>
+    <file>warning.png</file>
     <file>hideicon.png</file>
     <file>showicon.png</file>
     <file>background/background_640X360.png</file>
